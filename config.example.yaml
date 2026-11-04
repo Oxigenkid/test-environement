@@ -1,0 +1,78 @@
+# Copy to config.yaml and edit. Every value has a safe default in trader/config.py.
+
+mode: paper                 # paper | live  (live is locked until the go-live gate passes)
+exchange: kraken            # any ccxt exchange id: kraken, coinbase, binance, binanceus, kucoin...
+quote: USD                  # quote currency held as cash (USD, CAD, EUR, USDT, USDC...)
+symbols: [BTC/USD, ETH/USD, SOL/USD]
+timeframe: 4h               # candle size used for entry signals
+strategies: [trend, momentum, meanrev]   # enabled strategy agents
+htf_sma_days: 200           # only buy when the daily close is above its 200-day average (0 = off)
+heartbeat_seconds: 60       # how often the supervisor wakes up (stops/targets checked every beat)
+db_path: data/trader.db
+
+paper_starting_balance: 10.0
+target_equity: 100.0        # capital ladder stage 02 starts at $100; set 1000 to run through stage 02
+on_target: stop             # stop = flatten and stop trading | continue
+
+risk:
+  allocation: full              # full = commit all available cash on entry | risk = cap loss per trade at max_risk_per_trade
+  max_risk_per_trade: 0.02      # used when allocation=risk (2% of equity lost if the stop is hit)
+  max_open_positions: 2
+  max_position_fraction: 0.6    # used when allocation=risk (one position never uses more than 60% of equity)
+  daily_loss_limit: 0.05        # no new entries for the rest of the UTC day after -5%
+  kill_switch_drawdown: 0.25    # flatten + halt at -25% from equity peak
+  fee_rate: 0.004               # per side (Kraken Pro taker at the lowest tier is 0.40%)
+  slippage: 0.0005
+  min_reward_to_fees: 3.0       # expected gain to target must be >= 3x round-trip fees
+  stop_atr_mult: 3.0
+  target_atr_mult: 6.0
+
+go_live_gate:
+  min_trades: 100
+  min_profit_factor: 1.3
+  max_drawdown: 0.20
+
+intel:
+  news_refresh_minutes: 15
+  news_half_life_hours: 6
+  max_size_boost: 0.25          # good news can raise size at most +25% (still capped by risk limits)
+  veto_threshold: -0.35         # strongly negative news for a coin blocks new buys of it
+  market_veto_threshold: -0.45  # strongly negative overall market news blocks all new buys
+  feeds:
+    - https://www.coindesk.com/arc/outboundfeeds/rss/
+    - https://cointelegraph.com/rss
+    - https://decrypt.co/feed
+    - https://bitcoinmagazine.com/.rss/full/
+    - https://www.theblock.co/rss.xml
+    - https://www.federalreserve.gov/feeds/press_all.xml
+    - https://www.cnbc.com/id/100003114/device/rss/rss.html
+    - https://feeds.content.dowjones.io/public/rss/mw_topstories
+    - https://www.reddit.com/r/CryptoCurrency/top/.rss?t=day
+
+llm:                            # optional local LLM analyst (Ollama or any OpenAI-compatible server)
+  enabled: false
+  base_url: http://localhost:11434/v1
+  model: llama3.1
+  refresh_minutes: 30
+
+dashboard:
+  enabled: true
+  host: 127.0.0.1
+  port: 8765
+
+backtest:
+  exchange: coinbaseexchange    # Kraken only serves the last 720 candles; Coinbase has deep history
+  days: 365
+
+learning:
+  enabled: true
+  max_consecutive_losses: 3     # bench a symbol+strategy after 3 consecutive losses
+  cooldown_hours: 48
+  retune_after_losses: 2        # re-tune parameters after 2 consecutive losses across any symbol
+  retune_every_trades: 20       # also re-tune periodically every 20 closed trades
+  retune_min_hours: 12          # minimum interval between non-forced re-tunes
+  tune_days: 240                # walk-forward window (2/3 train, 1/3 validation)
+  min_improvement: 0.01         # required score improvement before adopting new parameters
+  auto_resume: true             # after a kill-switch, re-tune and automatically resume after resume_after_hours
+  auto_resume_live: false       # require manual resume on live accounts by default
+  resume_after_hours: 24

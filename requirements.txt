@@ -1,0 +1,10 @@
+ccxt>=4.3
+pandas>=2.0
+numpy>=1.24
+feedparser>=6.0
+vaderSentiment>=3.3
+requests>=2.31
+pyyaml>=6.0
+fastapi>=0.110
+uvicorn>=0.29
+pytest>=8.0
