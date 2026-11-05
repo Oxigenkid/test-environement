@@ -228,3 +228,21 @@ def test_commits_when_flat_and_rotates_after_loss(cfg, journal):
     open_t2 = journal.open_trades("paper")
     assert len(open_t2) == 1 and open_t2[0]["strategy"] != first_strat
 
+
+def test_sol_excluded_and_existing_sol_trade_closed(journal):
+    cfg = load_config(None, {"db_path": ":memory:", "symbols": ["BTC/USD", "ETH/USD", "SOL/USD"]})
+    assert "SOL/USD" not in cfg.symbols
+    assert cfg.symbols == ["BTC/USD", "ETH/USD"]
+
+    broker = PaperBroker(cfg, journal)
+    ex = ExecutionAgent(cfg, journal, broker)
+    journal.execute(
+        "INSERT INTO trades(mode,symbol,strategy,regime,entry_ts,entry_price,qty,stop,target) "
+        "VALUES('paper','SOL/USD','trend','trend_up',1000,150.0,0.05,140.0,170.0)"
+    )
+    assert len(journal.open_trades("paper")) == 1
+    ex.run(Context(now=time.time(), prices={"SOL/USD": 150.0, "BTC/USD": 100.0}))
+    assert not journal.open_trades("paper")
+    assert journal.closed_trades("paper")[0]["exit_reason"] == "symbol_removed"
+
+

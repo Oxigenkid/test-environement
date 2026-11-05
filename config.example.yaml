@@ -3,7 +3,7 @@
 mode: paper                 # paper | live  (live is locked until the go-live gate passes)
 exchange: kraken            # any ccxt exchange id: kraken, coinbase, binance, binanceus, kucoin...
 quote: USD                  # quote currency held as cash (USD, CAD, EUR, USDT, USDC...)
-symbols: [BTC/USD, ETH/USD, SOL/USD]
+symbols: [BTC/USD, ETH/USD]
 timeframe: 4h               # candle size used for entry signals
 strategies: [trend, momentum, meanrev]   # enabled strategy agents
 htf_sma_days: 200           # only buy when the daily close is above its 200-day average (0 = off)

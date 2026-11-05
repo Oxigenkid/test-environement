@@ -11,7 +11,8 @@ DEFAULTS: dict[str, Any] = {
     "mode": "paper",
     "exchange": "kraken",
     "quote": "USD",
-    "symbols": ["BTC/USD", "ETH/USD", "SOL/USD"],
+    "symbols": ["BTC/USD", "ETH/USD"],
+    "excluded_bases": ["SOL"],
     "timeframe": "4h",
     "htf_sma_days": 200,
     "strategies": ["trend", "momentum", "meanrev"],
@@ -132,6 +133,8 @@ def load_config(path: str | Path | None = None, overrides: dict | None = None) -
         raise ValueError("mode must be 'paper' or 'live'")
     if cfg["risk"].get("allocation", "full") not in ("full", "risk"):
         raise ValueError("risk.allocation must be 'full' or 'risk'")
+    excluded = {b.upper() for b in (cfg.get("excluded_bases") or [])}
+    cfg["symbols"] = [s for s in cfg["symbols"] if s.split("/")[0].upper() not in excluded]
     for s in cfg["symbols"]:
         if not s.endswith("/" + cfg["quote"]):
             raise ValueError(f"symbol {s} does not use quote currency {cfg['quote']}")

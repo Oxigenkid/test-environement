@@ -38,6 +38,10 @@ class ExecutionAgent(Agent):
                 self.close_trade(t, price, "flatten")
                 out.append(f"flattened {sym}")
                 continue
+            if sym not in self.cfg.symbols:
+                self.close_trade(t, price, "symbol_removed")
+                out.append(f"closed {sym} (symbol_removed)")
+                continue
             row = None
             bars_held = None
             if ctx.new_bar.get(sym) and sym in ctx.candles:

@@ -58,8 +58,10 @@ class MarketDataAgent(Agent):
         self.feat[sym] = feat
 
     def run(self, ctx: Context) -> str:
-        tickers = self.ex.fetch_tickers(self.cfg.symbols)
-        for sym in self.cfg.symbols:
+        open_syms = {t["symbol"] for m in ("paper", "live") for t in self.journal.open_trades(m)}
+        all_syms = list(dict.fromkeys([*self.cfg.symbols, *open_syms]))
+        tickers = self.ex.fetch_tickers(all_syms)
+        for sym in all_syms:
             t = tickers.get(sym) or {}
             px = t.get("last") or t.get("close") or t.get("bid")
             if px:
