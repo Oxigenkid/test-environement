@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import math
 import time
 
 from fastapi import FastAPI
@@ -11,6 +12,16 @@ from .config import Config
 from .gate import check_gate
 from .journal import Journal
 from .learning import effective_config
+
+
+def _clean(v):
+    if isinstance(v, float):
+        return v if math.isfinite(v) else None
+    if isinstance(v, dict):
+        return {k: _clean(x) for k, x in v.items()}
+    if isinstance(v, (list, tuple)):
+        return [_clean(x) for x in v]
+    return v
 
 
 def create_app(cfg: Config) -> FastAPI:
@@ -26,7 +37,7 @@ def create_app(cfg: Config) -> FastAPI:
         m = mode()
         ok, stats, problems = check_gate(cfg, j)
         peak = j.get_state(f"{m}_peak")
-        return {
+        return _clean({
             "now": time.time(), "heartbeat": hb, "mode": m, "exchange": cfg.exchange, "symbols": cfg.symbols,
             "timeframe": cfg.timeframe, "target": cfg.target_equity, "start": cfg.paper_starting_balance,
             "peak": peak, "halted": j.get_state("halted"), "goal": j.get_state("goal_reached"),
@@ -39,29 +50,29 @@ def create_app(cfg: Config) -> FastAPI:
                 "last_tuning": j.get_state("last_tuning_result"), "auto_resume_at": j.get_state("halt_resume_at"),
                 "lessons": j.query("SELECT ts, symbol, strategy, kind, lesson, pnl FROM lessons ORDER BY ts DESC LIMIT 10"),
             },
-        }
+        })
 
     @app.get("/api/trades")
     def trades():
         m = mode()
-        return {"open": j.open_trades(m), "closed": j.closed_trades(m, limit=50)}
+        return _clean({"open": j.open_trades(m), "closed": j.closed_trades(m, limit=50)})
 
     @app.get("/api/equity")
     def equity():
         rows = j.query("SELECT ts, equity FROM equity WHERE mode=? ORDER BY ts", (mode(),))
         step = max(1, len(rows) // 400)
-        return rows[::step] + (rows[-1:] if rows and len(rows) % step else [])
+        return _clean(rows[::step] + (rows[-1:] if rows and len(rows) % step else []))
 
     @app.get("/api/news")
     def news():
         rows = j.query("SELECT title, link, source, published, score, symbols FROM news ORDER BY published DESC LIMIT 40")
         for r in rows:
             r["symbols"] = json.loads(r["symbols"])
-        return rows
+        return _clean(rows)
 
     @app.get("/api/events")
     def events():
-        return j.query("SELECT * FROM events ORDER BY ts DESC LIMIT 60")
+        return _clean(j.query("SELECT * FROM events ORDER BY ts DESC LIMIT 60"))
 
     @app.get("/", response_class=HTMLResponse)
     def index():

@@ -246,3 +246,18 @@ def test_sol_excluded_and_existing_sol_trade_closed(journal):
     assert journal.closed_trades("paper")[0]["exit_reason"] == "symbol_removed"
 
 
+def test_dashboard_status_handles_infinite_profit_factor(tmp_path):
+    from starlette.responses import JSONResponse
+    from trader.dashboard import create_app
+
+    db = tmp_path / "t.db"
+    cfg = load_config(None, {"db_path": str(db)})
+    j = Journal(db)
+    add_closed(j, "BTC/USD", "trend", 1.25, 1, reason="target")  # 1 win, 0 losses -> profit_factor = inf
+    app = create_app(cfg)
+    status_fn = next(r.endpoint for r in app.routes if getattr(r, "path", None) == "/api/status")
+    body = JSONResponse(status_fn()).body
+    assert b'"profit_factor":null' in body
+
+
+
